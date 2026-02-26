@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="4" fill="#121214"/>
+  <!-- Clipboard body -->
+  <rect x="7" y="6" width="18" height="22" rx="2" fill="none" stroke="#06b6d4" stroke-width="2"/>
+  <!-- Clipboard clip -->
+  <rect x="11" y="3" width="10" height="5" rx="1" fill="#06b6d4"/>
+  <!-- Check lines (pixel-style) -->
+  <rect x="10" y="13" width="2" height="2" fill="#22d3ee"/>
+  <rect x="12" y="15" width="2" height="2" fill="#22d3ee"/>
+  <rect x="14" y="13" width="2" height="2" fill="#22d3ee"/>
+  <rect x="18" y="13" width="4" height="2" fill="#67e8f9"/>
+  <!-- Line 2 -->
+  <rect x="10" y="19" width="2" height="2" fill="#22d3ee"/>
+  <rect x="12" y="21" width="2" height="2" fill="#22d3ee"/>
+  <rect x="14" y="19" width="2" height="2" fill="#22d3ee"/>
+  <rect x="18" y="19" width="4" height="2" fill="#67e8f9"/>
+  <!-- Pixel corner accents -->
+  <rect x="5" y="5" width="2" height="2" fill="#06b6d4" opacity="0.4"/>
+  <rect x="25" y="5" width="2" height="2" fill="#06b6d4" opacity="0.4"/>
+  <rect x="5" y="25" width="2" height="2" fill="#06b6d4" opacity="0.4"/>
+  <rect x="25" y="25" width="2" height="2" fill="#06b6d4" opacity="0.4"/>
+</svg>
