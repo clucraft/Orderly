@@ -1,4 +1,4 @@
-const SHOPIFY_API_VERSION = '2024-01'
+const SHOPIFY_API_VERSION = '2025-10'
 
 function shopifyUrl(storeUrl: string, path: string): string {
   // Normalize: strip protocol, trailing slashes
