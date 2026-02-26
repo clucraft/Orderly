@@ -13,6 +13,11 @@ export default function Settings() {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
 
+  // Shopify form
+  const [shopifyUrl, setShopifyUrl] = useState('')
+  const [shopifyToken, setShopifyToken] = useState('')
+  const [shopifySaving, setShopifySaving] = useState(false)
+
   // Connection status message from URL params
   const [statusMsg, setStatusMsg] = useState('')
 
@@ -42,6 +47,7 @@ export default function Settings() {
   }, [fetchStores])
 
   const etsyConnection = stores.find((s) => s.platform === 'etsy')
+  const shopifyConnection = stores.find((s) => s.platform === 'shopify')
 
   async function handleSaveCredentials(e: FormEvent) {
     e.preventDefault()
@@ -66,6 +72,22 @@ export default function Settings() {
       window.location.href = res.data.url
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Failed to start OAuth')
+    }
+  }
+
+  async function handleShopifyConnect(e: FormEvent) {
+    e.preventDefault()
+    setShopifySaving(true)
+    setSaveError('')
+    try {
+      await api.post('/stores/shopify', { storeUrl: shopifyUrl, accessToken: shopifyToken })
+      setShopifyUrl('')
+      setShopifyToken('')
+      await fetchStores()
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Failed to connect Shopify')
+    } finally {
+      setShopifySaving(false)
     }
   }
 
@@ -209,14 +231,67 @@ export default function Settings() {
               </div>
             )}
 
-            {/* Shopify — placeholder */}
-            <div className="flex items-center justify-between p-3 bg-surface-700/50 rounded-lg border border-surface-600">
-              <div>
-                <p className="text-zinc-200 font-medium">Shopify</p>
-                <p className="text-xs text-zinc-500">Not connected</p>
+            {/* Shopify */}
+            {shopifyConnection?.is_connected ? (
+              <div className="p-4 bg-surface-700/50 rounded-lg border border-green-500/30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-zinc-200 font-medium">Shopify</p>
+                      <span className="badge bg-green-500/20 text-green-400 border border-green-500/30">
+                        <Check className="h-3 w-3 mr-1" />Connected
+                      </span>
+                    </div>
+                    <p className="text-sm text-zinc-400 mt-1">
+                      Shop: <span className="text-primary-400">{shopifyConnection.shop_name}</span>
+                    </p>
+                    {shopifyConnection.connected_at && (
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        Connected {new Date(shopifyConnection.connected_at).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    className="btn btn-danger text-sm flex items-center gap-2"
+                    onClick={() => handleDisconnect(shopifyConnection.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Disconnect
+                  </button>
+                </div>
               </div>
-              <button className="btn btn-secondary text-sm" disabled>Coming soon</button>
-            </div>
+            ) : (
+              <div className="p-4 bg-surface-700/50 rounded-lg border border-surface-600">
+                <p className="text-zinc-200 font-medium mb-3">Shopify</p>
+                <form onSubmit={handleShopifyConnect} className="space-y-3">
+                  <div>
+                    <label className="label">Store URL</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={shopifyUrl}
+                      onChange={(e) => setShopifyUrl(e.target.value)}
+                      placeholder="my-store.myshopify.com"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Admin API Access Token</label>
+                    <input
+                      type="password"
+                      className="input"
+                      value={shopifyToken}
+                      onChange={(e) => setShopifyToken(e.target.value)}
+                      placeholder="shpat_..."
+                      required
+                    />
+                  </div>
+                  <button type="submit" className="btn btn-primary text-sm" disabled={shopifySaving}>
+                    {shopifySaving ? 'Connecting...' : 'Connect'}
+                  </button>
+                </form>
+              </div>
+            )}
           </div>
         </div>
 

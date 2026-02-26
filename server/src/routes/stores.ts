@@ -9,6 +9,7 @@ import {
   refreshAccessToken,
   getShopInfo,
 } from '../services/etsy.js'
+import { getShop } from '../services/shopify.js'
 
 const router = Router()
 
@@ -169,6 +170,52 @@ router.get('/etsy/callback', async (req, res) => {
     const msg = err instanceof Error ? err.message : 'unknown'
     res.redirect('/settings?etsy_error=' + encodeURIComponent(msg))
   }
+})
+
+// POST /api/stores/shopify — save + verify Shopify store URL + access token
+router.post('/shopify', requireAuth, async (req, res) => {
+  const userId = (req as any).userId
+  const { storeUrl, accessToken } = req.body
+
+  if (!storeUrl || !accessToken) {
+    res.status(400).json({ message: 'Store URL and access token are required' })
+    return
+  }
+
+  // Verify credentials by calling Shopify Shop API
+  let shop: { id: number; name: string }
+  try {
+    shop = await getShop(storeUrl, accessToken)
+  } catch (err) {
+    res.status(400).json({
+      message: `Could not connect to Shopify: ${err instanceof Error ? err.message : 'unknown error'}`,
+    })
+    return
+  }
+
+  // Check if user already has a Shopify connection
+  const { rows: existing } = await pool.query(
+    'SELECT id FROM store_connections WHERE user_id = $1 AND platform = $2',
+    [userId, 'shopify'],
+  )
+
+  if (existing.length > 0) {
+    await pool.query(
+      `UPDATE store_connections
+       SET api_key = $1, access_token = $2, shop_id = $3, shop_name = $4, connected_at = NOW()
+       WHERE id = $5`,
+      [storeUrl, accessToken, String(shop.id), shop.name, existing[0].id],
+    )
+    res.json({ id: existing[0].id, message: 'Shopify store connected' })
+    return
+  }
+
+  const { rows } = await pool.query(
+    `INSERT INTO store_connections (user_id, platform, api_key, access_token, shop_id, shop_name, connected_at)
+     VALUES ($1, 'shopify', $2, $3, $4, $5, NOW()) RETURNING id`,
+    [userId, storeUrl, accessToken, String(shop.id), shop.name],
+  )
+  res.json({ id: rows[0].id, message: 'Shopify store connected' })
 })
 
 // DELETE /api/stores/:id — disconnect a store

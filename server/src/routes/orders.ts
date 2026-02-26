@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { pool } from '../db.js'
 import { requireAuth } from '../middleware/auth.js'
 import { getReceipts, mapReceiptToOrder } from '../services/etsy.js'
+import { getOrders as getShopifyOrders, mapShopifyOrder } from '../services/shopify.js'
 import { ensureFreshTokens } from './stores.js'
 
 const router = Router()
@@ -112,6 +113,51 @@ router.post('/sync', requireAuth, async (req, res) => {
       } catch (err) {
         console.error(`Sync error for connection ${conn.id}:`, err)
         errors.push(`Etsy (${conn.shop_id}): ${err instanceof Error ? err.message : 'unknown error'}`)
+      }
+    } else if (conn.platform === 'shopify') {
+      try {
+        const { rows: connRows } = await pool.query(
+          'SELECT api_key, access_token FROM store_connections WHERE id = $1',
+          [conn.id],
+        )
+        const shopifyConn = connRows[0]
+        const orders = await getShopifyOrders(shopifyConn.api_key, shopifyConn.access_token, { limit: 100 })
+
+        for (const shopifyOrder of orders) {
+          const order = mapShopifyOrder(shopifyOrder)
+
+          await pool.query(
+            `INSERT INTO orders (store_connection_id, platform, external_id, receipt_id,
+              customer_name, customer_email, status, total, currency,
+              items_json, shipping_json, platform_created_at)
+             VALUES ($1, 'shopify', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+             ON CONFLICT (platform, external_id) DO UPDATE SET
+              customer_name = EXCLUDED.customer_name,
+              customer_email = EXCLUDED.customer_email,
+              status = EXCLUDED.status,
+              total = EXCLUDED.total,
+              items_json = EXCLUDED.items_json,
+              shipping_json = EXCLUDED.shipping_json,
+              updated_at = NOW()`,
+            [
+              conn.id,
+              order.external_id,
+              order.receipt_id,
+              order.customer_name,
+              order.customer_email,
+              order.status,
+              order.total,
+              order.currency,
+              order.items_json,
+              order.shipping_json,
+              order.platform_created_at,
+            ],
+          )
+          synced++
+        }
+      } catch (err) {
+        console.error(`Sync error for connection ${conn.id}:`, err)
+        errors.push(`Shopify (${conn.shop_id}): ${err instanceof Error ? err.message : 'unknown error'}`)
       }
     }
   }
