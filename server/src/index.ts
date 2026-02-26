@@ -5,6 +5,8 @@ import helmet from 'helmet'
 import { initDb } from './db.js'
 import healthRouter from './routes/health.js'
 import authRouter from './routes/auth.js'
+import storesRouter from './routes/stores.js'
+import ordersRouter from './routes/orders.js'
 
 const app = express()
 const port = parseInt(process.env.PORT || '3001', 10)
@@ -17,6 +19,8 @@ app.use(express.json())
 // Routes
 app.use('/api', healthRouter)
 app.use('/api/auth', authRouter)
+app.use('/api/stores', storesRouter)
+app.use('/api/orders', ordersRouter)
 
 // Start server
 async function start() {
