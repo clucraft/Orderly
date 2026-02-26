@@ -1,4 +1,7 @@
 import type { Request, Response, NextFunction } from 'express'
+import jwt from 'jsonwebtoken'
+
+const JWT_SECRET = process.env.JWT_SECRET || 'change-this-to-a-random-secret'
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization
@@ -7,13 +10,12 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
     return
   }
 
-  const token = authHeader.slice(7)
-
-  // TODO: Verify JWT token and attach user to request
-  if (!token) {
+  try {
+    const token = authHeader.slice(7)
+    const payload = jwt.verify(token, JWT_SECRET) as { userId: number }
+    ;(req as any).userId = payload.userId
+    next()
+  } catch {
     res.status(401).json({ message: 'Invalid token' })
-    return
   }
-
-  next()
 }
