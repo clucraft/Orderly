@@ -100,7 +100,7 @@ export default function OrderDetail({ order, onClose }: Props) {
       {/* Panel */}
       <div
         ref={panelRef}
-        className={`fixed top-0 right-0 h-full w-full max-w-xl bg-surface-800 border-l border-surface-600 z-50 transform transition-transform duration-300 ease-in-out overflow-y-auto ${
+        className={`fixed top-14 md:top-0 bottom-0 right-0 w-full max-w-xl bg-surface-800 border-l border-surface-600 z-50 transform transition-transform duration-300 ease-in-out overflow-y-auto ${
           order ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
