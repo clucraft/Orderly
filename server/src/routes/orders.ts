@@ -54,6 +54,104 @@ router.get('/stats', requireAuth, async (req, res) => {
   res.json(rows[0])
 })
 
+// GET /api/orders/:id — full order detail with store info
+router.get('/:id', requireAuth, async (req, res) => {
+  const userId = (req as any).userId
+  const orderId = parseInt(req.params.id as string)
+
+  const { rows } = await pool.query(
+    `SELECT o.*, sc.refresh_token as store_url, sc.shop_name
+     FROM orders o
+     JOIN store_connections sc ON o.store_connection_id = sc.id
+     WHERE o.id = $1 AND sc.user_id = $2`,
+    [orderId, userId],
+  )
+
+  if (rows.length === 0) {
+    res.status(404).json({ message: 'Order not found' })
+    return
+  }
+
+  res.json({ order: rows[0] })
+})
+
+// GET /api/orders/:id/notes — list notes for an order
+router.get('/:id/notes', requireAuth, async (req, res) => {
+  const userId = (req as any).userId
+  const orderId = parseInt(req.params.id as string)
+
+  // Verify the order belongs to the user
+  const { rows: orderCheck } = await pool.query(
+    `SELECT o.id FROM orders o
+     JOIN store_connections sc ON o.store_connection_id = sc.id
+     WHERE o.id = $1 AND sc.user_id = $2`,
+    [orderId, userId],
+  )
+
+  if (orderCheck.length === 0) {
+    res.status(404).json({ message: 'Order not found' })
+    return
+  }
+
+  const { rows: notes } = await pool.query(
+    `SELECT n.id, n.content, n.created_at, u.display_name as author
+     FROM order_notes n
+     JOIN users u ON n.user_id = u.id
+     WHERE n.order_id = $1
+     ORDER BY n.created_at ASC`,
+    [orderId],
+  )
+
+  res.json({ notes })
+})
+
+// POST /api/orders/:id/notes — add a note to an order
+router.post('/:id/notes', requireAuth, async (req, res) => {
+  const userId = (req as any).userId
+  const orderId = parseInt(req.params.id as string)
+  const { content } = req.body
+
+  if (!content || typeof content !== 'string' || content.trim().length === 0) {
+    res.status(400).json({ message: 'Content is required' })
+    return
+  }
+
+  if (content.length > 2000) {
+    res.status(400).json({ message: 'Content must be 2000 characters or less' })
+    return
+  }
+
+  // Verify the order belongs to the user
+  const { rows: orderCheck } = await pool.query(
+    `SELECT o.id FROM orders o
+     JOIN store_connections sc ON o.store_connection_id = sc.id
+     WHERE o.id = $1 AND sc.user_id = $2`,
+    [orderId, userId],
+  )
+
+  if (orderCheck.length === 0) {
+    res.status(404).json({ message: 'Order not found' })
+    return
+  }
+
+  const { rows } = await pool.query(
+    `INSERT INTO order_notes (order_id, user_id, content)
+     VALUES ($1, $2, $3)
+     RETURNING id, content, created_at`,
+    [orderId, userId, content.trim()],
+  )
+
+  // Fetch the author name to return
+  const { rows: userRows } = await pool.query(
+    'SELECT display_name FROM users WHERE id = $1',
+    [userId],
+  )
+
+  res.status(201).json({
+    note: { ...rows[0], author: userRows[0]?.display_name || 'Unknown' },
+  })
+})
+
 // POST /api/orders/sync — trigger manual sync from all connected stores
 router.post('/sync', requireAuth, async (req, res) => {
   const userId = (req as any).userId

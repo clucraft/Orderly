@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { ShoppingBag, RefreshCw, Search } from 'lucide-react'
 import { api } from '../services/api'
 import type { Order, OrderStatus } from '../types'
+import OrderDetail from '../components/OrderDetail'
 
 const statusBadgeClass: Record<OrderStatus, string> = {
   pending: 'badge-pending',
@@ -24,6 +25,16 @@ export default function Orders() {
   const [syncing, setSyncing] = useState(false)
   const [syncResult, setSyncResult] = useState('')
   const [search, setSearch] = useState('')
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+
+  async function handleRowClick(orderId: number) {
+    try {
+      const res = await api.get(`/orders/${orderId}`)
+      setSelectedOrder(res.data.order)
+    } catch {
+      // ignore
+    }
+  }
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -138,7 +149,7 @@ export default function Orders() {
               </thead>
               <tbody>
                 {filtered.map((order) => (
-                  <tr key={order.id} className="border-b border-surface-700 hover:bg-surface-700/30">
+                  <tr key={order.id} className="border-b border-surface-700 hover:bg-surface-700/30 cursor-pointer" onClick={() => handleRowClick(order.id)}>
                     <td className="py-3 pr-4 font-medium">#{order.receipt_id || order.external_id}</td>
                     <td className="py-3 pr-4 capitalize">{order.platform}</td>
                     <td className="py-3 pr-4">{order.customer_name || '—'}</td>
@@ -160,6 +171,8 @@ export default function Orders() {
           </div>
         )}
       </div>
+
+      <OrderDetail order={selectedOrder} onClose={() => setSelectedOrder(null)} />
     </div>
   )
 }

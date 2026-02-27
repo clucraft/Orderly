@@ -124,6 +124,12 @@ interface EtsyReceipt {
     carrier_name: string
     tracking_code: string
   }>
+  first_line: string | null
+  second_line: string | null
+  city: string | null
+  state: string | null
+  zip: string | null
+  country_iso: string | null
   create_timestamp: number
   update_timestamp: number
 }
@@ -182,12 +188,25 @@ export function mapReceiptToOrder(receipt: EtsyReceipt) {
     currency: t.price?.currency_code || currency,
   }))
 
-  const shipping = receipt.shipments?.[0]
+  const shipping: Record<string, unknown> = receipt.shipments?.[0]
     ? {
         carrier: receipt.shipments[0].carrier_name,
         tracking: receipt.shipments[0].tracking_code,
       }
     : {}
+
+  if (receipt.first_line || receipt.city) {
+    shipping.address = {
+      name: receipt.name || '',
+      address1: receipt.first_line || '',
+      address2: receipt.second_line || '',
+      city: receipt.city || '',
+      state: receipt.state || '',
+      zip: receipt.zip || '',
+      country: receipt.country_iso || '',
+      phone: '',
+    }
+  }
 
   return {
     external_id: String(receipt.receipt_id),

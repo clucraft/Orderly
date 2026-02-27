@@ -6,6 +6,30 @@ export interface User {
 
 export type OrderStatus = 'pending' | 'unfulfilled' | 'shipped' | 'delivered' | 'cancelled'
 
+export interface OrderItem {
+  title: string
+  quantity: number
+  price: number
+  currency: string
+}
+
+export interface ShippingAddress {
+  name: string
+  address1: string
+  address2: string
+  city: string
+  state: string
+  zip: string
+  country: string
+  phone: string
+}
+
+export interface ShippingInfo {
+  carrier?: string
+  tracking?: string
+  address?: ShippingAddress
+}
+
 export interface Order {
   id: number
   store_connection_id: number
@@ -17,11 +41,20 @@ export interface Order {
   status: OrderStatus
   total: number
   currency: string
-  items_json: string
-  shipping_json: string
+  items_json: OrderItem[]
+  shipping_json: ShippingInfo
   created_at: string
   updated_at: string
   platform_created_at: string | null
+  store_url?: string
+  shop_name?: string
+}
+
+export interface OrderNote {
+  id: number
+  content: string
+  author: string
+  created_at: string
 }
 
 export interface StoreConnection {

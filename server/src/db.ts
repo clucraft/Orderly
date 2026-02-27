@@ -54,6 +54,16 @@ export async function initDb() {
     )
   `)
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS order_notes (
+      id SERIAL PRIMARY KEY,
+      order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      content TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `)
+
   // Seed default admin if no users exist
   const { rows } = await pool.query('SELECT COUNT(*) FROM users')
   if (parseInt(rows[0].count) === 0) {

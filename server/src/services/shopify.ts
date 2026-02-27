@@ -88,6 +88,13 @@ interface ShopifyOrder {
   }>
   shipping_address?: {
     name: string
+    address1: string
+    address2: string | null
+    city: string
+    province: string
+    zip: string
+    country: string
+    phone: string | null
   }
   fulfillments: Array<{
     tracking_company: string | null
@@ -146,9 +153,22 @@ export function mapShopifyOrder(order: ShopifyOrder) {
   }))
 
   const fulfillment = order.fulfillments?.[0]
-  const shipping = fulfillment
+  const shipping: Record<string, unknown> = fulfillment
     ? { carrier: fulfillment.tracking_company || '', tracking: fulfillment.tracking_number || '' }
     : {}
+
+  if (order.shipping_address) {
+    shipping.address = {
+      name: order.shipping_address.name || '',
+      address1: order.shipping_address.address1 || '',
+      address2: order.shipping_address.address2 || '',
+      city: order.shipping_address.city || '',
+      state: order.shipping_address.province || '',
+      zip: order.shipping_address.zip || '',
+      country: order.shipping_address.country || '',
+      phone: order.shipping_address.phone || '',
+    }
+  }
 
   const customerName =
     order.shipping_address?.name ||
