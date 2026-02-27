@@ -119,6 +119,7 @@ interface EtsyReceipt {
     title: string
     quantity: number
     price: { amount: number; divisor: number; currency_code: string }
+    variations: Array<{ formatted_name: string; formatted_value: string }>
   }>
   shipments: Array<{
     carrier_name: string
@@ -186,6 +187,7 @@ export function mapReceiptToOrder(receipt: EtsyReceipt) {
     quantity: t.quantity,
     price: t.price ? t.price.amount / t.price.divisor : 0,
     currency: t.price?.currency_code || currency,
+    options: (t.variations || []).map((v) => ({ name: v.formatted_name, value: v.formatted_value })),
   }))
 
   const shipping: Record<string, unknown> = receipt.shipments?.[0]

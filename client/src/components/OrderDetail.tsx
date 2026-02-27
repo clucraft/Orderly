@@ -174,7 +174,18 @@ export default function OrderDetail({ order, onClose }: Props) {
                     <tbody>
                       {items.map((item, i) => (
                         <tr key={i} className="border-b border-surface-700 last:border-0">
-                          <td className="p-2 sm:p-3 text-sm">{item.title}</td>
+                          <td className="p-2 sm:p-3 text-sm">
+                            {item.title}
+                            {item.options && item.options.length > 0 && (
+                              <div className="mt-1 space-y-0.5">
+                                {item.options.map((opt, j) => (
+                                  <p key={j} className="text-xs text-zinc-500">
+                                    {opt.name}: {opt.value}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
+                          </td>
                           <td className="p-2 sm:p-3 text-right text-sm">{item.quantity}</td>
                           <td className="p-2 sm:p-3 text-right text-sm">
                             {formatCents(Math.round(item.price * 100), item.currency || order.currency)}

@@ -85,6 +85,8 @@ interface ShopifyOrder {
     title: string
     quantity: number
     price: string
+    variant_title?: string
+    properties?: Array<{ name: string; value: string }>
   }>
   shipping_address?: {
     name: string
@@ -145,12 +147,28 @@ export function mapShopifyStatus(
 export function mapShopifyOrder(order: ShopifyOrder) {
   const total = Math.round(parseFloat(order.total_price) * 100)
 
-  const items = (order.line_items || []).map((li) => ({
-    title: li.title,
-    quantity: li.quantity,
-    price: parseFloat(li.price),
-    currency: order.currency,
-  }))
+  const items = (order.line_items || []).map((li) => {
+    const options: Array<{ name: string; value: string }> = []
+    if (li.variant_title) {
+      li.variant_title.split(' / ').forEach((v) => {
+        options.push({ name: 'Variant', value: v.trim() })
+      })
+    }
+    if (li.properties) {
+      for (const p of li.properties) {
+        if (!p.name.startsWith('_')) {
+          options.push({ name: p.name, value: p.value })
+        }
+      }
+    }
+    return {
+      title: li.title,
+      quantity: li.quantity,
+      price: parseFloat(li.price),
+      currency: order.currency,
+      options,
+    }
+  })
 
   const fulfillment = order.fulfillments?.[0]
   const shipping: Record<string, unknown> = fulfillment

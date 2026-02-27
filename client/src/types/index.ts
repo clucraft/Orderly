@@ -11,6 +11,7 @@ export interface OrderItem {
   quantity: number
   price: number
   currency: string
+  options?: Array<{ name: string; value: string }>
 }
 
 export interface ShippingAddress {
