@@ -2,6 +2,22 @@
 
 All notable changes to Orderly will be documented in this file.
 
+## [0.2.0] — 2026-02-26
+
+### Added
+- Mobile-friendly responsive UI across all pages
+- Collapsible sidebar with hamburger menu on mobile (<768px)
+- Fixed top bar with "Orderly" branding on mobile
+- Backdrop overlay when mobile sidebar is open
+
+### Changed
+- Sidebar slides in/out as overlay on mobile; unchanged on desktop
+- Orders table hides Platform and Date columns on small screens
+- Dashboard recent-orders table hides Date column on small screens
+- Order detail panel uses tighter padding on mobile
+- Settings connection-status cards stack vertically on mobile
+- Nav links auto-close the sidebar on mobile
+
 ## [0.1.0] — 2026-02-26
 
 ### Added
