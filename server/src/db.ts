@@ -64,14 +64,21 @@ export async function initDb() {
     )
   `)
 
-  // Seed default admin if no users exist
+  // Seed default admin if no users exist, or update password if ADMIN_PASSWORD is set
   const { rows } = await pool.query('SELECT COUNT(*) FROM users')
   if (parseInt(rows[0].count) === 0) {
-    const hash = await bcrypt.hash('admin', 10)
+    const hash = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'admin', 10)
     await pool.query(
       'INSERT INTO users (email, password_hash, display_name) VALUES ($1, $2, $3)',
       ['admin@orderly.app', hash, 'Admin']
     )
-    console.log('Seeded default admin user (admin@orderly.app / admin)')
+    console.log('Seeded default admin user (admin@orderly.app)')
+  } else if (process.env.ADMIN_PASSWORD) {
+    const hash = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10)
+    await pool.query(
+      'UPDATE users SET password_hash = $1 WHERE email = $2',
+      [hash, 'admin@orderly.app']
+    )
+    console.log('Updated admin password from ADMIN_PASSWORD env var')
   }
 }
