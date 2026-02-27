@@ -3,7 +3,7 @@ import { pool } from '../db.js'
 import { requireAuth } from '../middleware/auth.js'
 import { getReceipts, mapReceiptToOrder } from '../services/etsy.js'
 import { getOrders as getShopifyOrders, mapShopifyOrder } from '../services/shopify.js'
-import { ensureFreshTokens } from './stores.js'
+import { ensureFreshTokens, ensureFreshShopifyTokens } from './stores.js'
 
 const router = Router()
 
@@ -116,12 +116,8 @@ router.post('/sync', requireAuth, async (req, res) => {
       }
     } else if (conn.platform === 'shopify') {
       try {
-        const { rows: connRows } = await pool.query(
-          'SELECT api_key, access_token FROM store_connections WHERE id = $1',
-          [conn.id],
-        )
-        const shopifyConn = connRows[0]
-        const orders = await getShopifyOrders(shopifyConn.api_key, shopifyConn.access_token, { limit: 100 })
+        const freshConn = await ensureFreshShopifyTokens(conn.id)
+        const orders = await getShopifyOrders(freshConn.api_key, freshConn.access_token, { limit: 100 })
 
         for (const shopifyOrder of orders) {
           const order = mapShopifyOrder(shopifyOrder)

@@ -1,9 +1,36 @@
 const SHOPIFY_API_VERSION = '2026-01'
 
+function normalizeHost(storeUrl: string): string {
+  return storeUrl.replace(/^https?:\/\//, '').replace(/\/+$/, '')
+}
+
 function shopifyUrl(storeUrl: string, path: string): string {
-  // Normalize: strip protocol, trailing slashes
-  const host = storeUrl.replace(/^https?:\/\//, '').replace(/\/+$/, '')
-  return `https://${host}/admin/api/${SHOPIFY_API_VERSION}${path}`
+  return `https://${normalizeHost(storeUrl)}/admin/api/${SHOPIFY_API_VERSION}${path}`
+}
+
+// Exchange client credentials for a 24-hour access token
+export async function exchangeCredentials(
+  storeUrl: string,
+  clientId: string,
+  clientSecret: string,
+): Promise<{ access_token: string; expires_in: number; scope: string }> {
+  const host = normalizeHost(storeUrl)
+  const res = await fetch(`https://${host}/admin/oauth/access_token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: 'client_credentials',
+    }),
+  })
+
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`Shopify token exchange failed: ${err}`)
+  }
+
+  return res.json()
 }
 
 export async function getShop(

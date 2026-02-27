@@ -15,7 +15,8 @@ export default function Settings() {
 
   // Shopify form
   const [shopifyUrl, setShopifyUrl] = useState('')
-  const [shopifyToken, setShopifyToken] = useState('')
+  const [shopifyClientId, setShopifyClientId] = useState('')
+  const [shopifyClientSecret, setShopifyClientSecret] = useState('')
   const [shopifySaving, setShopifySaving] = useState(false)
 
   // Connection status message from URL params
@@ -80,9 +81,10 @@ export default function Settings() {
     setShopifySaving(true)
     setSaveError('')
     try {
-      await api.post('/stores/shopify', { storeUrl: shopifyUrl, accessToken: shopifyToken })
+      await api.post('/stores/shopify', { storeUrl: shopifyUrl, clientId: shopifyClientId, clientSecret: shopifyClientSecret })
       setShopifyUrl('')
-      setShopifyToken('')
+      setShopifyClientId('')
+      setShopifyClientSecret('')
       await fetchStores()
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Failed to connect Shopify')
@@ -276,13 +278,24 @@ export default function Settings() {
                     />
                   </div>
                   <div>
-                    <label className="label">Admin API Access Token</label>
+                    <label className="label">Client ID</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={shopifyClientId}
+                      onChange={(e) => setShopifyClientId(e.target.value)}
+                      placeholder="Enter your app's Client ID"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Client Secret</label>
                     <input
                       type="password"
                       className="input"
-                      value={shopifyToken}
-                      onChange={(e) => setShopifyToken(e.target.value)}
-                      placeholder="shpat_..."
+                      value={shopifyClientSecret}
+                      onChange={(e) => setShopifyClientSecret(e.target.value)}
+                      placeholder="Enter your app's Client Secret"
                       required
                     />
                   </div>
