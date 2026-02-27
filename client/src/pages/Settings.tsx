@@ -156,7 +156,7 @@ export default function Settings() {
             ) : etsyConnection?.is_connected ? (
               /* Connected state */
               <div className="p-4 bg-surface-700/50 rounded-lg border border-green-500/30">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="text-zinc-200 font-medium">Etsy</p>
@@ -174,7 +174,7 @@ export default function Settings() {
                     )}
                   </div>
                   <button
-                    className="btn btn-danger text-sm flex items-center gap-2"
+                    className="btn btn-danger text-sm flex items-center gap-2 self-start sm:self-auto"
                     onClick={() => handleDisconnect(etsyConnection.id)}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -185,7 +185,7 @@ export default function Settings() {
             ) : etsyConnection?.has_credentials ? (
               /* Credentials saved, not yet connected via OAuth */
               <div className="p-4 bg-surface-700/50 rounded-lg border border-amber-500/30">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="text-zinc-200 font-medium">Etsy</p>
@@ -197,7 +197,7 @@ export default function Settings() {
                       Click connect to authorize with Etsy
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 self-start sm:self-auto">
                     <button
                       className="btn btn-primary text-sm flex items-center gap-2"
                       onClick={() => handleConnect(etsyConnection.id)}
@@ -252,7 +252,7 @@ export default function Settings() {
             {shopifyConnection?.is_connected ? (
               /* Connected state */
               <div className="p-4 bg-surface-700/50 rounded-lg border border-green-500/30">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="text-zinc-200 font-medium">Shopify</p>
@@ -270,7 +270,7 @@ export default function Settings() {
                     )}
                   </div>
                   <button
-                    className="btn btn-danger text-sm flex items-center gap-2"
+                    className="btn btn-danger text-sm flex items-center gap-2 self-start sm:self-auto"
                     onClick={() => handleDisconnect(shopifyConnection.id)}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -281,7 +281,7 @@ export default function Settings() {
             ) : shopifyConnection?.has_credentials ? (
               /* Credentials saved, not yet connected via OAuth */
               <div className="p-4 bg-surface-700/50 rounded-lg border border-amber-500/30">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="text-zinc-200 font-medium">Shopify</p>
@@ -293,7 +293,7 @@ export default function Settings() {
                       Click connect to authorize with Shopify
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 self-start sm:self-auto">
                     <button
                       className="btn btn-primary text-sm flex items-center gap-2"
                       onClick={() => handleShopifyOAuth(shopifyConnection.id)}

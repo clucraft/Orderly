@@ -79,13 +79,13 @@ export default function Orders() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-primary-400 text-glow">Order Management</h1>
           <p className="text-zinc-500 mt-1">View and manage orders across all platforms</p>
         </div>
         <button
-          className="btn btn-primary flex items-center gap-2"
+          className="btn btn-primary flex items-center gap-2 self-start sm:self-auto"
           onClick={handleSync}
           disabled={syncing}
         >
@@ -140,18 +140,18 @@ export default function Orders() {
               <thead>
                 <tr className="border-b border-surface-600">
                   <th className="pb-3 pr-4">Order #</th>
-                  <th className="pb-3 pr-4">Platform</th>
+                  <th className="pb-3 pr-4 hidden sm:table-cell">Platform</th>
                   <th className="pb-3 pr-4">Customer</th>
                   <th className="pb-3 pr-4">Status</th>
                   <th className="pb-3 pr-4 text-right">Total</th>
-                  <th className="pb-3">Date</th>
+                  <th className="pb-3 hidden sm:table-cell">Date</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((order) => (
                   <tr key={order.id} className="border-b border-surface-700 hover:bg-surface-700/30 cursor-pointer" onClick={() => handleRowClick(order.id)}>
                     <td className="py-3 pr-4 font-medium">#{order.receipt_id || order.external_id}</td>
-                    <td className="py-3 pr-4 capitalize">{order.platform}</td>
+                    <td className="py-3 pr-4 capitalize hidden sm:table-cell">{order.platform}</td>
                     <td className="py-3 pr-4">{order.customer_name || '—'}</td>
                     <td className="py-3 pr-4">
                       <span className={`badge ${statusBadgeClass[order.status] || 'badge-pending'}`}>
@@ -159,7 +159,7 @@ export default function Orders() {
                       </span>
                     </td>
                     <td className="py-3 pr-4 text-right">{formatCents(order.total, order.currency)}</td>
-                    <td className="py-3 text-zinc-500 text-sm">
+                    <td className="py-3 text-zinc-500 text-sm hidden sm:table-cell">
                       {order.platform_created_at
                         ? new Date(order.platform_created_at).toLocaleDateString()
                         : new Date(order.created_at).toLocaleDateString()}

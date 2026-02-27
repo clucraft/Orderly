@@ -105,7 +105,7 @@ export default function OrderDetail({ order, onClose }: Props) {
         }`}
       >
         {order && (
-          <div className="p-6 space-y-6">
+          <div className="p-4 sm:p-6 space-y-6">
             {/* Header */}
             <div className="flex items-start justify-between">
               <div>
@@ -165,21 +165,21 @@ export default function OrderDetail({ order, onClose }: Props) {
                   <table>
                     <thead>
                       <tr className="border-b border-surface-600">
-                        <th className="p-3 text-left">Product</th>
-                        <th className="p-3 text-right">Qty</th>
-                        <th className="p-3 text-right">Price</th>
-                        <th className="p-3 text-right">Total</th>
+                        <th className="p-2 sm:p-3 text-left">Product</th>
+                        <th className="p-2 sm:p-3 text-right">Qty</th>
+                        <th className="p-2 sm:p-3 text-right">Price</th>
+                        <th className="p-2 sm:p-3 text-right">Total</th>
                       </tr>
                     </thead>
                     <tbody>
                       {items.map((item, i) => (
                         <tr key={i} className="border-b border-surface-700 last:border-0">
-                          <td className="p-3 text-sm">{item.title}</td>
-                          <td className="p-3 text-right text-sm">{item.quantity}</td>
-                          <td className="p-3 text-right text-sm">
+                          <td className="p-2 sm:p-3 text-sm">{item.title}</td>
+                          <td className="p-2 sm:p-3 text-right text-sm">{item.quantity}</td>
+                          <td className="p-2 sm:p-3 text-right text-sm">
                             {formatCents(Math.round(item.price * 100), item.currency || order.currency)}
                           </td>
-                          <td className="p-3 text-right text-sm font-medium">
+                          <td className="p-2 sm:p-3 text-right text-sm font-medium">
                             {formatCents(Math.round(item.price * item.quantity * 100), item.currency || order.currency)}
                           </td>
                         </tr>

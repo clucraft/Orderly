@@ -101,7 +101,7 @@ export default function Dashboard() {
                   <th className="pb-3 pr-4">Customer</th>
                   <th className="pb-3 pr-4">Status</th>
                   <th className="pb-3 pr-4 text-right">Total</th>
-                  <th className="pb-3">Date</th>
+                  <th className="pb-3 hidden sm:table-cell">Date</th>
                 </tr>
               </thead>
               <tbody>
@@ -115,7 +115,7 @@ export default function Dashboard() {
                       </span>
                     </td>
                     <td className="py-3 pr-4 text-right">{formatCents(order.total, order.currency)}</td>
-                    <td className="py-3 text-zinc-500 text-sm">
+                    <td className="py-3 text-zinc-500 text-sm hidden sm:table-cell">
                       {order.platform_created_at
                         ? new Date(order.platform_created_at).toLocaleDateString()
                         : new Date(order.created_at).toLocaleDateString()}
