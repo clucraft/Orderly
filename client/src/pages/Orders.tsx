@@ -152,7 +152,21 @@ export default function Orders() {
                   <tr key={order.id} className="border-b border-surface-700 hover:bg-surface-700/30 cursor-pointer" onClick={() => handleRowClick(order.id)}>
                     <td className="py-3 pr-4 font-medium">#{order.receipt_id || order.external_id}</td>
                     <td className="py-3 pr-4 capitalize hidden sm:table-cell">{order.platform}</td>
-                    <td className="py-3 pr-4">{order.customer_name || '—'}</td>
+                    <td className="py-3 pr-4">
+                      <div>{order.customer_name || '—'}</div>
+                      {order.items_json?.length > 0 && (
+                        <div className="mt-1 space-y-0.5">
+                          {order.items_json.map((item, i) => (
+                            <div key={i}>
+                              <p className="text-xs text-zinc-500">{item.title} ×{item.quantity}</p>
+                              {item.options?.map((opt, j) => (
+                                <p key={j} className="text-[11px] text-zinc-600 pl-2">{opt.name}: {opt.value}</p>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </td>
                     <td className="py-3 pr-4">
                       <span className={`badge ${statusBadgeClass[order.status] || 'badge-pending'}`}>
                         {order.status}
