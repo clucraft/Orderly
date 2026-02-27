@@ -18,9 +18,6 @@ services:
 
   api:
     image: ghcr.io/clucraft/orderly-api:latest
-    build:
-      context: ./server
-      dockerfile: Dockerfile
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-orderly}:${POSTGRES_PASSWORD:-changeme}@db:5432/${POSTGRES_DB:-orderly}
@@ -35,9 +32,6 @@ services:
 
   client:
     image: ghcr.io/clucraft/orderly-client:latest
-    build:
-      context: ./client
-      dockerfile: Dockerfile
     restart: unless-stopped
     ports:
       - "8080:80"
