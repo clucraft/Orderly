@@ -44,6 +44,12 @@ export default function Settings() {
     } else if (params.get('etsy_error')) {
       setStatusMsg(`Etsy connection error: ${params.get('etsy_error')}`)
       window.history.replaceState({}, '', '/settings')
+    } else if (params.get('shopify_connected') === 'true') {
+      setStatusMsg('Shopify store connected successfully!')
+      window.history.replaceState({}, '', '/settings')
+    } else if (params.get('shopify_error')) {
+      setStatusMsg(`Shopify connection error: ${params.get('shopify_error')}`)
+      window.history.replaceState({}, '', '/settings')
     }
   }, [fetchStores])
 
@@ -76,7 +82,7 @@ export default function Settings() {
     }
   }
 
-  async function handleShopifyConnect(e: FormEvent) {
+  async function handleShopifySaveCredentials(e: FormEvent) {
     e.preventDefault()
     setShopifySaving(true)
     setSaveError('')
@@ -87,9 +93,18 @@ export default function Settings() {
       setShopifyClientSecret('')
       await fetchStores()
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Failed to connect Shopify')
+      setSaveError(err instanceof Error ? err.message : 'Failed to save Shopify credentials')
     } finally {
       setShopifySaving(false)
+    }
+  }
+
+  async function handleShopifyOAuth(id: number) {
+    try {
+      const res = await api.get(`/stores/shopify/connect/${id}`)
+      window.location.href = res.data.url
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Failed to start Shopify OAuth')
     }
   }
 
@@ -235,6 +250,7 @@ export default function Settings() {
 
             {/* Shopify */}
             {shopifyConnection?.is_connected ? (
+              /* Connected state */
               <div className="p-4 bg-surface-700/50 rounded-lg border border-green-500/30">
                 <div className="flex items-center justify-between">
                   <div>
@@ -262,10 +278,43 @@ export default function Settings() {
                   </button>
                 </div>
               </div>
+            ) : shopifyConnection?.has_credentials ? (
+              /* Credentials saved, not yet connected via OAuth */
+              <div className="p-4 bg-surface-700/50 rounded-lg border border-amber-500/30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-zinc-200 font-medium">Shopify</p>
+                      <span className="badge bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                        Credentials saved
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-500 mt-1">
+                      Click connect to authorize with Shopify
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      className="btn btn-primary text-sm flex items-center gap-2"
+                      onClick={() => handleShopifyOAuth(shopifyConnection.id)}
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Connect to Shopify
+                    </button>
+                    <button
+                      className="btn btn-danger text-sm"
+                      onClick={() => handleDisconnect(shopifyConnection.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
             ) : (
+              /* No credentials yet — show form */
               <div className="p-4 bg-surface-700/50 rounded-lg border border-surface-600">
                 <p className="text-zinc-200 font-medium mb-3">Shopify</p>
-                <form onSubmit={handleShopifyConnect} className="space-y-3">
+                <form onSubmit={handleShopifySaveCredentials} className="space-y-3">
                   <div>
                     <label className="label">Store URL</label>
                     <input
@@ -300,7 +349,7 @@ export default function Settings() {
                     />
                   </div>
                   <button type="submit" className="btn btn-primary text-sm" disabled={shopifySaving}>
-                    {shopifySaving ? 'Connecting...' : 'Connect'}
+                    {shopifySaving ? 'Saving...' : 'Save Credentials'}
                   </button>
                 </form>
               </div>

@@ -1,6 +1,8 @@
+import crypto from 'crypto'
+
 const SHOPIFY_API_VERSION = '2026-01'
 
-function normalizeHost(storeUrl: string): string {
+export function normalizeHost(storeUrl: string): string {
   return storeUrl.replace(/^https?:\/\//, '').replace(/\/+$/, '')
 }
 
@@ -8,12 +10,32 @@ function shopifyUrl(storeUrl: string, path: string): string {
   return `https://${normalizeHost(storeUrl)}/admin/api/${SHOPIFY_API_VERSION}${path}`
 }
 
-// Exchange client credentials for a 24-hour access token
-export async function exchangeCredentials(
+export function generateNonce(): string {
+  return crypto.randomBytes(16).toString('hex')
+}
+
+export function generateAuthUrl(
+  storeUrl: string,
+  clientId: string,
+  redirectUri: string,
+  state: string,
+): string {
+  const host = normalizeHost(storeUrl)
+  const params = new URLSearchParams({
+    client_id: clientId,
+    scope: 'read_orders',
+    redirect_uri: redirectUri,
+    state,
+  })
+  return `https://${host}/admin/oauth/authorize?${params.toString()}`
+}
+
+export async function exchangeCodeForToken(
   storeUrl: string,
   clientId: string,
   clientSecret: string,
-): Promise<{ access_token: string; expires_in: number; scope: string }> {
+  code: string,
+): Promise<{ access_token: string; scope: string }> {
   const host = normalizeHost(storeUrl)
   const res = await fetch(`https://${host}/admin/oauth/access_token`, {
     method: 'POST',
@@ -21,7 +43,7 @@ export async function exchangeCredentials(
     body: new URLSearchParams({
       client_id: clientId,
       client_secret: clientSecret,
-      grant_type: 'client_credentials',
+      code,
     }),
   })
 

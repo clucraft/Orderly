@@ -9,13 +9,14 @@ import {
   refreshAccessToken,
   getShopInfo,
 } from '../services/etsy.js'
-import { exchangeCredentials, getShop } from '../services/shopify.js'
+import { generateNonce, generateAuthUrl, exchangeCodeForToken, getShop, normalizeHost } from '../services/shopify.js'
 
 const router = Router()
 
-// In-memory store for OAuth state (code verifier + state per connection id)
+// In-memory store for OAuth state per connection id
 // In production, consider storing in DB or Redis
-const oauthPending = new Map<number, { codeVerifier: string; state: string }>()
+const etsyOauthPending = new Map<number, { codeVerifier: string; state: string }>()
+const shopifyOauthPending = new Map<number, { state: string }>()
 
 // GET /api/stores — list user's connected stores
 router.get('/', requireAuth, async (req, res) => {
@@ -92,7 +93,7 @@ router.get('/etsy/connect/:id', requireAuth, async (req, res) => {
   const state = generateState()
 
   // Store verifier + state + connectionId for callback
-  oauthPending.set(connectionId, { codeVerifier, state })
+  etsyOauthPending.set(connectionId, { codeVerifier, state })
 
   const authUrl = generateOAuthUrl(conn.api_key, callbackUrl, codeVerifier, `${connectionId}:${state}`)
 
@@ -124,13 +125,13 @@ router.get('/etsy/callback', async (req, res) => {
   const connectionId = parseInt(stateStr.slice(0, colonIndex), 10)
   const stateValue = stateStr.slice(colonIndex + 1)
 
-  const pending = oauthPending.get(connectionId)
+  const pending = etsyOauthPending.get(connectionId)
   if (!pending || pending.state !== stateValue) {
     res.redirect('/?etsy_error=state_mismatch')
     return
   }
 
-  oauthPending.delete(connectionId)
+  etsyOauthPending.delete(connectionId)
 
   try {
     // Fetch the connection to get api_key
@@ -172,7 +173,8 @@ router.get('/etsy/callback', async (req, res) => {
   }
 })
 
-// POST /api/stores/shopify — save + verify Shopify credentials via client credentials grant
+// POST /api/stores/shopify — save Shopify credentials (before OAuth)
+// Stores: api_key = client ID, api_secret = client secret, refresh_token = store URL
 router.post('/shopify', requireAuth, async (req, res) => {
   const userId = (req as any).userId
   const { storeUrl, clientId, clientSecret } = req.body
@@ -182,29 +184,12 @@ router.post('/shopify', requireAuth, async (req, res) => {
     return
   }
 
-  // Exchange client credentials for an access token
-  let tokens: { access_token: string; expires_in: number }
-  try {
-    tokens = await exchangeCredentials(storeUrl, clientId, clientSecret)
-  } catch (err) {
-    res.status(400).json({
-      message: `Could not connect to Shopify: ${err instanceof Error ? err.message : 'unknown error'}`,
-    })
+  // Validate store URL format
+  const host = normalizeHost(storeUrl)
+  if (!host.endsWith('.myshopify.com')) {
+    res.status(400).json({ message: 'Store URL must be a .myshopify.com domain' })
     return
   }
-
-  // Verify by calling Shop API
-  let shop: { id: number; name: string }
-  try {
-    shop = await getShop(storeUrl, tokens.access_token)
-  } catch (err) {
-    res.status(400).json({
-      message: `Token exchanged but Shop API failed: ${err instanceof Error ? err.message : 'unknown error'}`,
-    })
-    return
-  }
-
-  const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString()
 
   // Check if user already has a Shopify connection
   const { rows: existing } = await pool.query(
@@ -214,24 +199,114 @@ router.post('/shopify', requireAuth, async (req, res) => {
 
   if (existing.length > 0) {
     await pool.query(
-      `UPDATE store_connections
-       SET api_key = $1, api_secret = $2, refresh_token = $3,
-           access_token = $4, token_expires_at = $5,
-           shop_id = $6, shop_name = $7, connected_at = NOW()
-       WHERE id = $8`,
-      [storeUrl, clientSecret, clientId, tokens.access_token, expiresAt, String(shop.id), shop.name, existing[0].id],
+      'UPDATE store_connections SET api_key = $1, api_secret = $2, refresh_token = $3 WHERE id = $4',
+      [clientId, clientSecret, host, existing[0].id],
     )
-    res.json({ id: existing[0].id, message: 'Shopify store connected' })
+    res.json({ id: existing[0].id, message: 'Shopify credentials saved' })
     return
   }
 
   const { rows } = await pool.query(
-    `INSERT INTO store_connections (user_id, platform, api_key, api_secret, refresh_token,
-       access_token, token_expires_at, shop_id, shop_name, connected_at)
-     VALUES ($1, 'shopify', $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING id`,
-    [userId, storeUrl, clientSecret, clientId, tokens.access_token, expiresAt, String(shop.id), shop.name],
+    `INSERT INTO store_connections (user_id, platform, api_key, api_secret, refresh_token)
+     VALUES ($1, 'shopify', $2, $3, $4) RETURNING id`,
+    [userId, clientId, clientSecret, host],
   )
-  res.json({ id: rows[0].id, message: 'Shopify store connected' })
+  res.json({ id: rows[0].id, message: 'Shopify credentials saved' })
+})
+
+// GET /api/stores/shopify/connect/:id — generate OAuth URL, redirect user to Shopify
+router.get('/shopify/connect/:id', requireAuth, async (req, res) => {
+  const userId = (req as any).userId
+  const connectionId = parseInt(String(req.params.id), 10)
+
+  const { rows } = await pool.query(
+    'SELECT * FROM store_connections WHERE id = $1 AND user_id = $2',
+    [connectionId, userId],
+  )
+
+  if (rows.length === 0) {
+    res.status(404).json({ message: 'Store connection not found' })
+    return
+  }
+
+  const conn = rows[0]
+  if (!conn.api_key || !conn.refresh_token) {
+    res.status(400).json({ message: 'Shopify credentials not configured' })
+    return
+  }
+
+  const callbackUrl = process.env.SHOPIFY_CALLBACK_URL || `${req.protocol}://${req.get('host')}/api/stores/shopify/callback`
+
+  const state = generateNonce()
+  shopifyOauthPending.set(connectionId, { state })
+
+  // api_key = client ID, refresh_token = store URL
+  const authUrl = generateAuthUrl(conn.refresh_token, conn.api_key, callbackUrl, `${connectionId}:${state}`)
+
+  res.json({ url: authUrl })
+})
+
+// GET /api/stores/shopify/callback — handle Shopify OAuth redirect
+router.get('/shopify/callback', async (req, res) => {
+  const { code, state, shop } = req.query
+
+  if (!code || !state || !shop) {
+    res.redirect('/settings?shopify_error=missing_params')
+    return
+  }
+
+  // Parse state = "connectionId:randomState"
+  const stateStr = String(state)
+  const colonIndex = stateStr.indexOf(':')
+  if (colonIndex === -1) {
+    res.redirect('/settings?shopify_error=invalid_state')
+    return
+  }
+
+  const connectionId = parseInt(stateStr.slice(0, colonIndex), 10)
+  const stateValue = stateStr.slice(colonIndex + 1)
+
+  const pending = shopifyOauthPending.get(connectionId)
+  if (!pending || pending.state !== stateValue) {
+    res.redirect('/settings?shopify_error=state_mismatch')
+    return
+  }
+
+  shopifyOauthPending.delete(connectionId)
+
+  try {
+    const { rows } = await pool.query('SELECT * FROM store_connections WHERE id = $1', [connectionId])
+    if (rows.length === 0) {
+      res.redirect('/settings?shopify_error=connection_not_found')
+      return
+    }
+
+    const conn = rows[0]
+    // api_key = client ID, api_secret = client secret, refresh_token = store URL
+    const tokens = await exchangeCodeForToken(
+      conn.refresh_token,
+      conn.api_key,
+      conn.api_secret,
+      String(code),
+    )
+
+    // Get shop info using the new token
+    const shopInfo = await getShop(conn.refresh_token, tokens.access_token)
+
+    // Offline tokens don't expire — store without expiry
+    await pool.query(
+      `UPDATE store_connections
+       SET access_token = $1, shop_id = $2, shop_name = $3, connected_at = NOW()
+       WHERE id = $4`,
+      [tokens.access_token, String(shopInfo.id), shopInfo.name, connectionId],
+    )
+
+    res.redirect('/settings?shopify_connected=true')
+  } catch (err) {
+    console.error('Shopify OAuth callback error:', err)
+    const msg = err instanceof Error ? err.message : 'unknown'
+    res.redirect('/settings?shopify_error=' + encodeURIComponent(msg))
+  }
 })
 
 // DELETE /api/stores/:id — disconnect a store
@@ -271,30 +346,6 @@ export async function ensureFreshTokens(connectionId: number) {
     await pool.query(
       `UPDATE store_connections SET access_token = $1, refresh_token = $2, token_expires_at = $3 WHERE id = $4`,
       [tokens.access_token, tokens.refresh_token, newExpiresAt, connectionId],
-    )
-    return { ...conn, access_token: tokens.access_token }
-  }
-
-  return conn
-}
-
-// Helper: ensure Shopify tokens are fresh (24hr expiry, re-exchange client credentials)
-export async function ensureFreshShopifyTokens(connectionId: number) {
-  const { rows } = await pool.query('SELECT * FROM store_connections WHERE id = $1', [connectionId])
-  if (rows.length === 0) throw new Error('Connection not found')
-
-  const conn = rows[0]
-  if (!conn.access_token) throw new Error('Not connected')
-
-  // Refresh if token expires within 5 minutes
-  const expiresAt = conn.token_expires_at ? new Date(conn.token_expires_at).getTime() : 0
-  if (Date.now() > expiresAt - 5 * 60 * 1000) {
-    // api_key = store URL, refresh_token = client ID, api_secret = client secret
-    const tokens = await exchangeCredentials(conn.api_key, conn.refresh_token, conn.api_secret)
-    const newExpiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString()
-    await pool.query(
-      `UPDATE store_connections SET access_token = $1, token_expires_at = $2 WHERE id = $3`,
-      [tokens.access_token, newExpiresAt, connectionId],
     )
     return { ...conn, access_token: tokens.access_token }
   }
