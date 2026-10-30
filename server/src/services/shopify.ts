@@ -103,6 +103,11 @@ interface ShopifyOrder {
     tracking_company: string | null
     tracking_number: string | null
   }>
+  shipping_lines?: Array<{
+    title: string
+    price: string
+    discounted_price?: string
+  }>
   created_at: string
   updated_at: string
   customer?: {
@@ -175,6 +180,16 @@ export function mapShopifyOrder(order: ShopifyOrder) {
   const shipping: Record<string, unknown> = fulfillment
     ? { carrier: fulfillment.tracking_company || '', tracking: fulfillment.tracking_number || '' }
     : {}
+
+  // The shipping option the buyer picked at checkout, and what they paid for it after discounts
+  const shippingLines = order.shipping_lines || []
+  if (shippingLines.length > 0) {
+    shipping.method = shippingLines.map((l) => l.title).filter(Boolean).join(' + ')
+    shipping.shipping_paid = shippingLines.reduce(
+      (sum, l) => sum + Math.round(parseFloat(l.discounted_price ?? l.price) * 100 || 0),
+      0,
+    )
+  }
 
   if (order.shipping_address) {
     shipping.address = {

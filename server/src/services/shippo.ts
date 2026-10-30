@@ -47,6 +47,7 @@ interface ShippoOrder {
     currency?: string | null
   }>
   shipping_method?: string | null
+  shipping_cost?: string | null
   total_price?: string | null
   currency?: string | null
   weight?: string | null
@@ -215,6 +216,8 @@ function mapShippoOrder(order: ShippoOrder): MappedOrder {
       phone: to.phone || '',
     },
   }
+  // What the buyer paid for shipping, in cents; Etsy orders usually come without a method name
+  if (order.shipping_cost) shipping.shipping_paid = toCents(order.shipping_cost)
   const weight = parseFloat(order.weight || '')
   if (weight > 0 && order.weight_unit) shipping.weight = { value: weight, unit: order.weight_unit }
 

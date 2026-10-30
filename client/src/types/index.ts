@@ -31,6 +31,7 @@ export interface ShippingInfo {
   tracking?: string
   address?: ShippingAddress
   method?: string
+  shipping_paid?: number // cents the buyer paid for shipping
   notes?: string
   weight?: { value: number; unit: string }
 }

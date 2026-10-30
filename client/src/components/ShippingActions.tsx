@@ -38,6 +38,37 @@ function splitOz(totalOz: number): { lb: string; oz: string } {
   return { lb: lb ? String(lb) : '', oz: oz ? String(oz) : '' }
 }
 
+const CARRIERS = ['usps', 'ups', 'fedex', 'dhl']
+
+function normalize(text: string | null | undefined): string {
+  return (text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+}
+
+// The rate for the shipping option the buyer picked, e.g. "USPS Priority Mail" → USPS Priority Mail.
+// When the buyer's option names a carrier only that carrier's rates count; otherwise only multi-word
+// service names do, so a generic title like "Ground shipping" doesn't land on UPS Ground.
+function matchBuyerRate(method: string | undefined, rates: LabelRate[]): LabelRate | null {
+  const wanted = normalize(method)
+  if (!wanted) return null
+  const carrier = CARRIERS.find((c) => ` ${wanted} `.includes(` ${c} `))
+  let best: LabelRate | null = null
+  for (const rate of rates) {
+    const service = normalize(rate.service)
+    if (!service || !` ${wanted} `.includes(` ${service} `)) continue
+    if (carrier ? !normalize(rate.provider).startsWith(carrier) : !service.includes(' ')) continue
+    if (!best || service.length > normalize(best.service).length) best = rate
+  }
+  return best
+}
+
+// With no option name to go on, the rate closest to what the buyer paid for shipping, if that isn't
+// the cheapest one; a hint that they may have paid for an upgrade
+function closestToPaid(paid: number | undefined, rates: LabelRate[]): LabelRate | null {
+  if (!paid || rates.length < 2) return null
+  const closest = rates.reduce((a, b) => (Math.abs(b.amount - paid) < Math.abs(a.amount - paid) ? b : a))
+  return closest.id !== rates[0].id ? closest : null
+}
+
 interface Props {
   order: Order
   onOrderUpdated?: () => void
@@ -138,7 +169,9 @@ export default function ShippingActions({ order, onOrderUpdated }: Props) {
       })
       setRates(res.data.rates)
       setRateMessages(res.data.messages)
-      setSelectedRate(res.data.rates[0]?.id || '')
+      // Rates come cheapest first; go with the buyer's choice when it can be matched
+      const choice = matchBuyerRate(order.shipping_json?.method, res.data.rates)
+      setSelectedRate(choice?.id || res.data.rates[0]?.id || '')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not get rates')
     } finally {
@@ -187,6 +220,10 @@ export default function ShippingActions({ order, onOrderUpdated }: Props) {
   const shippo = info?.shippo
   const selected = rates?.find((r) => r.id === selectedRate)
   const alreadyShipped = order.status === 'shipped' || order.status === 'delivered'
+  const buyerMethod = order.shipping_json?.method || ''
+  const buyerPaid = order.shipping_json?.shipping_paid
+  const buyerRate = rates ? matchBuyerRate(buyerMethod, rates) : null
+  const paidHint = rates && !buyerMethod ? closestToPaid(buyerPaid, rates) : null
 
   return (
     <section className="space-y-3">
@@ -249,6 +286,22 @@ export default function ShippingActions({ order, onOrderUpdated }: Props) {
               <AlertTriangle className="h-4 w-4 shrink-0" />
               {order.platform === 'etsy' ? 'Etsy' : 'Shopify'} won't get the tracking number automatically: this order
               isn't in Shippo.
+            </p>
+          )}
+
+          {(buyerMethod || buyerPaid !== undefined) && (
+            <p className="text-sm text-zinc-400">
+              {buyerMethod ? (
+                <>
+                  Buyer chose: <span className="text-zinc-200 font-medium">{buyerMethod}</span>
+                  {buyerPaid !== undefined && <> · paid {formatCents(buyerPaid, order.currency)}</>}
+                </>
+              ) : (
+                <>
+                  Buyer paid <span className="text-zinc-200 font-medium">{formatCents(buyerPaid ?? 0, order.currency)}</span>{' '}
+                  for shipping
+                </>
+              )}
             </p>
           )}
 
@@ -334,6 +387,18 @@ export default function ShippingActions({ order, onOrderUpdated }: Props) {
             </div>
           ) : (
             <div className="space-y-2">
+              {buyerMethod && !buyerRate && (
+                <p className="text-xs text-zinc-500">
+                  None of these rates matches "{buyerMethod}", so the cheapest is selected.
+                </p>
+              )}
+              {paidHint && buyerPaid !== undefined && (
+                <p className="text-xs text-amber-400 flex gap-1.5">
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                  The buyer paid {formatCents(buyerPaid, order.currency)} for shipping, closest to {paidHint.provider}{' '}
+                  {paidHint.service}. They may have picked an upgrade.
+                </p>
+              )}
               <div className="space-y-1.5">
                 {rates.map((r) => (
                   <label
@@ -350,8 +415,15 @@ export default function ShippingActions({ order, onOrderUpdated }: Props) {
                       className="accent-primary-500"
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-zinc-200">
-                        {r.provider} {r.service}
+                      <p className="text-sm text-zinc-200 flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span>
+                          {r.provider} {r.service}
+                        </span>
+                        {(r.id === buyerRate?.id || r.id === paidHint?.id) && (
+                          <span className="badge whitespace-nowrap bg-primary-500/20 text-primary-400 border border-primary-500/30">
+                            {r.id === buyerRate?.id ? "Buyer's choice" : 'Matches what buyer paid'}
+                          </span>
+                        )}
                       </p>
                       {(r.estimated_days || r.duration_terms) && (
                         <p className="text-xs text-zinc-500 truncate">
