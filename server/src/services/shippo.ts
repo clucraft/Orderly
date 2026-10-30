@@ -178,16 +178,10 @@ function mapShippoStatus(status: string): string {
   }
 }
 
-// Variant titles look like "Color: Blue, Size: Large"; anything else is kept whole
+// Shippo sends Etsy variations as their values joined by spaces, without the variation names
+// (e.g. "Regular ASA Yes: Brass Inserts"), so there's no reliable place to split; keep it whole
 function parseVariant(variant: string | null | undefined): Array<{ name: string; value: string }> {
   if (!variant) return []
-  const parts = variant.split(/,\s*/)
-  if (parts.every((p) => p.includes(':'))) {
-    return parts.map((p) => {
-      const i = p.indexOf(':')
-      return { name: p.slice(0, i).trim(), value: p.slice(i + 1).trim() }
-    })
-  }
   return [{ name: 'Variant', value: variant }]
 }
 
