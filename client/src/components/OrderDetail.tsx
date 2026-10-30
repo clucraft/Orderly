@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { X, ExternalLink, Truck, MessageSquare, Send } from 'lucide-react'
 import { api } from '../services/api'
 import type { Order, OrderNote, OrderStatus } from '../types'
+import ShippingActions from './ShippingActions'
 
 const statusBadgeClass: Record<OrderStatus, string> = {
   pending: 'badge-pending',
@@ -18,9 +19,10 @@ function formatCents(cents: number, currency: string): string {
 interface Props {
   order: Order | null
   onClose: () => void
+  onOrderUpdated?: () => void
 }
 
-export default function OrderDetail({ order, onClose }: Props) {
+export default function OrderDetail({ order, onClose, onOrderUpdated }: Props) {
   const [notes, setNotes] = useState<OrderNote[]>([])
   const [noteText, setNoteText] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -129,6 +131,9 @@ export default function OrderDetail({ order, onClose }: Props) {
               </button>
             </div>
 
+            {/* Label and invoice printing come first: it's what the panel is opened for when packing */}
+            <ShippingActions order={order} onOrderUpdated={onOrderUpdated} />
+
             {/* Customer */}
             <section>
               <h3 className="text-sm font-medium text-zinc-500 uppercase tracking-wider mb-2">Customer</h3>
@@ -212,7 +217,7 @@ export default function OrderDetail({ order, onClose }: Props) {
             </section>
 
             {/* Tracking */}
-            {shipping?.carrier && (
+            {(shipping?.carrier || shipping?.tracking) && (
               <section>
                 <h3 className="text-sm font-medium text-zinc-500 uppercase tracking-wider mb-2">Tracking</h3>
                 <div className="card !p-4 flex items-center gap-3">
@@ -235,10 +240,10 @@ export default function OrderDetail({ order, onClose }: Props) {
                 href={shopifyLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-primary w-full flex items-center justify-center gap-2"
+                className="btn btn-secondary w-full flex items-center justify-center gap-2"
               >
                 <ExternalLink className="h-4 w-4" />
-                Buy Label in Shopify
+                Open in Shopify
               </a>
             )}
 

@@ -96,6 +96,7 @@ interface ShopifyOrder {
     province: string
     zip: string
     country: string
+    country_code: string | null
     phone: string | null
   }
   fulfillments: Array<{
@@ -184,6 +185,7 @@ export function mapShopifyOrder(order: ShopifyOrder) {
       state: order.shipping_address.province || '',
       zip: order.shipping_address.zip || '',
       country: order.shipping_address.country || '',
+      country_code: order.shipping_address.country_code || '',
       phone: order.shipping_address.phone || '',
     }
   }

@@ -186,7 +186,14 @@ export default function Orders() {
         )}
       </div>
 
-      <OrderDetail order={selectedOrder} onClose={() => setSelectedOrder(null)} />
+      <OrderDetail
+        order={selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+        onOrderUpdated={() => {
+          if (selectedOrder) handleRowClick(selectedOrder.id)
+          fetchOrders()
+        }}
+      />
     </div>
   )
 }

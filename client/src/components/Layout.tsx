@@ -110,7 +110,7 @@ export default function Layout() {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col relative z-10 mt-14 md:mt-0">
+      <div className="flex-1 min-w-0 flex flex-col relative z-10 mt-14 md:mt-0">
         <main className="flex-1 p-4 sm:p-6 overflow-auto">
           <Outlet />
         </main>

@@ -22,9 +22,9 @@ const shopifyOauthPending = new Map<number, { state: string }>()
 router.get('/', requireAuth, async (req, res) => {
   const userId = (req as any).userId
   const { rows } = await pool.query(
-    `SELECT id, platform, shop_id, shop_name, connected_at,
+    `SELECT id, platform, connection_type, shop_id, shop_name, connected_at,
             CASE WHEN api_key IS NOT NULL THEN true ELSE false END as has_credentials,
-            CASE WHEN access_token IS NOT NULL THEN true ELSE false END as is_connected
+            CASE WHEN access_token IS NOT NULL OR connection_type = 'shippo' THEN true ELSE false END as is_connected
      FROM store_connections WHERE user_id = $1 ORDER BY created_at`,
     [userId],
   )

@@ -54,6 +54,45 @@ export async function initDb() {
     )
   `)
 
+  // 'api' = connected via the platform's own API/OAuth, 'shippo' = orders imported through Shippo
+  await pool.query(`
+    ALTER TABLE store_connections ADD COLUMN IF NOT EXISTS connection_type TEXT NOT NULL DEFAULT 'api'
+  `)
+
+  // The matching order in Shippo; labels bought against it send tracking back to the store
+  await pool.query(`
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS shippo_order_id TEXT
+  `)
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS shippo_settings (
+      user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      api_token TEXT,
+      from_address JSONB,
+      packages JSONB NOT NULL DEFAULT '[]',
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `)
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS shipping_labels (
+      id SERIAL PRIMARY KEY,
+      order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+      shippo_transaction_id TEXT,
+      carrier TEXT,
+      service TEXT,
+      tracking_code TEXT,
+      tracking_url TEXT,
+      cost INTEGER,
+      currency TEXT DEFAULT 'USD',
+      test_mode BOOLEAN NOT NULL DEFAULT false,
+      label_url TEXT,
+      -- Cached copy of the PDF at label_url
+      label_pdf BYTEA,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `)
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS order_notes (
       id SERIAL PRIMARY KEY,

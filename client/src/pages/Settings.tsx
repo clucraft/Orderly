@@ -2,15 +2,12 @@ import { useState, useEffect, useCallback, type FormEvent } from 'react'
 import { Store, Key, Bell, ExternalLink, Trash2, Check } from 'lucide-react'
 import { api } from '../services/api'
 import type { StoreConnection } from '../types'
+import ShippoSettings from '../components/ShippoSettings'
 
 export default function Settings() {
   const [stores, setStores] = useState<StoreConnection[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Etsy credential form
-  const [apiKey, setApiKey] = useState('')
-  const [apiSecret, setApiSecret] = useState('')
-  const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
 
   // Shopify form
@@ -55,32 +52,6 @@ export default function Settings() {
 
   const etsyConnection = stores.find((s) => s.platform === 'etsy')
   const shopifyConnection = stores.find((s) => s.platform === 'shopify')
-
-  async function handleSaveCredentials(e: FormEvent) {
-    e.preventDefault()
-    setSaving(true)
-    setSaveError('')
-    try {
-      await api.post('/stores/etsy', { apiKey, apiSecret })
-      setApiKey('')
-      setApiSecret('')
-      await fetchStores()
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Failed to save')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  async function handleConnect(id: number) {
-    try {
-      const res = await api.get(`/stores/etsy/connect/${id}`)
-      // Redirect user to Etsy OAuth
-      window.location.href = res.data.url
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Failed to start OAuth')
-    }
-  }
 
   async function handleShopifySaveCredentials(e: FormEvent) {
     e.preventDefault()
@@ -164,9 +135,13 @@ export default function Settings() {
                         <Check className="h-3 w-3 mr-1" />Connected
                       </span>
                     </div>
-                    <p className="text-sm text-zinc-400 mt-1">
-                      Shop: <span className="text-primary-400">{etsyConnection.shop_name}</span>
-                    </p>
+                    {etsyConnection.connection_type === 'shippo' ? (
+                      <p className="text-sm text-zinc-400 mt-1">Orders are imported through Shippo</p>
+                    ) : (
+                      <p className="text-sm text-zinc-400 mt-1">
+                        Shop: <span className="text-primary-400">{etsyConnection.shop_name}</span>
+                      </p>
+                    )}
                     {etsyConnection.connected_at && (
                       <p className="text-xs text-zinc-500 mt-0.5">
                         Connected {new Date(etsyConnection.connected_at).toLocaleDateString()}
@@ -182,69 +157,13 @@ export default function Settings() {
                   </button>
                 </div>
               </div>
-            ) : etsyConnection?.has_credentials ? (
-              /* Credentials saved, not yet connected via OAuth */
-              <div className="p-4 bg-surface-700/50 rounded-lg border border-amber-500/30">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-zinc-200 font-medium">Etsy</p>
-                      <span className="badge bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                        Credentials saved
-                      </span>
-                    </div>
-                    <p className="text-xs text-zinc-500 mt-1">
-                      Click connect to authorize with Etsy
-                    </p>
-                  </div>
-                  <div className="flex gap-2 self-start sm:self-auto">
-                    <button
-                      className="btn btn-primary text-sm flex items-center gap-2"
-                      onClick={() => handleConnect(etsyConnection.id)}
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      Connect to Etsy
-                    </button>
-                    <button
-                      className="btn btn-danger text-sm"
-                      onClick={() => handleDisconnect(etsyConnection.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
             ) : (
-              /* No credentials yet — show form */
+              /* Etsy orders arrive through Shippo on the first sync after it's connected */
               <div className="p-4 bg-surface-700/50 rounded-lg border border-surface-600">
-                <p className="text-zinc-200 font-medium mb-3">Etsy</p>
-                <form onSubmit={handleSaveCredentials} className="space-y-3">
-                  <div>
-                    <label className="label">API Key (Keystring)</label>
-                    <input
-                      type="text"
-                      className="input"
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
-                      placeholder="Enter your Etsy API key"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="label">Shared Secret</label>
-                    <input
-                      type="password"
-                      className="input"
-                      value={apiSecret}
-                      onChange={(e) => setApiSecret(e.target.value)}
-                      placeholder="Enter your Etsy shared secret"
-                      required
-                    />
-                  </div>
-                  <button type="submit" className="btn btn-primary text-sm" disabled={saving}>
-                    {saving ? 'Saving...' : 'Save Credentials'}
-                  </button>
-                </form>
+                <p className="text-zinc-200 font-medium">Etsy</p>
+                <p className="text-sm text-zinc-500 mt-1">
+                  Etsy orders come in through Shippo. Connect Shippo below, then sync orders.
+                </p>
               </div>
             )}
 
@@ -356,6 +275,8 @@ export default function Settings() {
             )}
           </div>
         </div>
+
+        <ShippoSettings onConnectedChange={fetchStores} />
 
         <div className="card">
           <div className="flex items-center gap-3 mb-4">

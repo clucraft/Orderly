@@ -22,6 +22,7 @@ export interface ShippingAddress {
   state: string
   zip: string
   country: string
+  country_code?: string
   phone: string
 }
 
@@ -29,6 +30,9 @@ export interface ShippingInfo {
   carrier?: string
   tracking?: string
   address?: ShippingAddress
+  method?: string
+  notes?: string
+  weight?: { value: number; unit: string }
 }
 
 export interface Order {
@@ -61,9 +65,54 @@ export interface OrderNote {
 export interface StoreConnection {
   id: number
   platform: string
+  connection_type: 'api' | 'shippo'
   shop_id: string | null
   shop_name: string | null
   connected_at: string | null
   has_credentials: boolean
   is_connected: boolean
+}
+
+export interface ShipFromAddress {
+  name: string
+  company?: string
+  street1: string
+  street2?: string
+  city: string
+  state: string
+  zip: string
+  country: string
+  phone?: string
+  email?: string
+}
+
+export interface PackagePreset {
+  name: string
+  length: number
+  width: number
+  height: number
+  weight_oz: number
+}
+
+export interface ShippingLabel {
+  id: number
+  carrier: string
+  service: string
+  tracking_code: string | null
+  tracking_url: string | null
+  cost: number
+  currency: string
+  test_mode: boolean
+  created_at: string
+}
+
+export interface LabelRate {
+  id: string
+  provider: string
+  service: string
+  amount: number
+  currency: string
+  estimated_days: number | null
+  duration_terms: string | null
+  attributes: string[]
 }

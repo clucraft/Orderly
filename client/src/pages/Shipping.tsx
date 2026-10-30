@@ -17,7 +17,7 @@ export default function Shipping() {
           <div className="flex items-center justify-center py-8 text-zinc-500">
             <div className="text-center">
               <Truck className="h-10 w-10 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">Label generation coming soon</p>
+              <p className="text-sm">Open an order to create and print its label</p>
             </div>
           </div>
         </div>
@@ -30,7 +30,7 @@ export default function Shipping() {
           <div className="flex items-center justify-center py-8 text-zinc-500">
             <div className="text-center">
               <PackageCheck className="h-10 w-10 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">Packing slip templates coming soon</p>
+              <p className="text-sm">Open an order to print its invoice</p>
             </div>
           </div>
         </div>
