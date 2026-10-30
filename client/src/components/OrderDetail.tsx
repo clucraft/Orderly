@@ -162,6 +162,23 @@ export default function OrderDetail({ order, onClose, onOrderUpdated }: Props) {
               </section>
             )}
 
+            {/* The shipping option the buyer picked and what they paid for it; Etsy doesn't name the option */}
+            {(shipping?.method || typeof shipping?.shipping_paid === 'number') && (
+              <section>
+                <h3 className="text-sm font-medium text-zinc-500 uppercase tracking-wider mb-2">Shipping</h3>
+                <div className="card !p-4 flex items-center justify-between gap-3 text-sm">
+                  <span className={shipping.method ? 'text-zinc-200 font-medium' : 'text-zinc-400'}>
+                    {shipping.method || 'Buyer paid'}
+                  </span>
+                  {typeof shipping.shipping_paid === 'number' && (
+                    <span className="text-zinc-200 font-medium">
+                      {formatCents(shipping.shipping_paid, order.currency)}
+                    </span>
+                  )}
+                </div>
+              </section>
+            )}
+
             {/* Items */}
             {items.length > 0 && (
               <section>
